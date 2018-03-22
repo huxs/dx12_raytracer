@@ -18,7 +18,11 @@
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "dxguid.lib")
+#pragma comment(lib, "FallbackLayer.lib")
 
 #include <d3d12_1.h>
 #include <d3dx12.h>
 #include <atlbase.h>
+#include <D3D12RaytracingFallback.h>
+
+#include "helper.h"

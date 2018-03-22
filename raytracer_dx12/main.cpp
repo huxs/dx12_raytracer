@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include "d3d12_device.h"
 
-
 HWND g_hWnd;
 D3D12Device* g_device;
 
@@ -17,6 +16,10 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 		return 0;
 
 	case WM_KEYUP:
+		return 0;
+
+	case WM_SIZE:
+		g_device->onWindowResize(LOWORD(lParam), HIWORD(lParam));
 		return 0;
 
 	case WM_PAINT:
@@ -63,8 +66,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
 		hInstance,
 		nullptr);
 
-	g_device = new D3D12Device(hInstance, g_hWnd);
-
+	g_device = new D3D12Device(hInstance, g_hWnd, 2, DXGI_FORMAT_R8G8B8A8_UNORM);
+	g_device->onWindowResize(width, height);
 	ShowWindow(g_hWnd, nCmdShow);
 
 	// Main sample loop.
@@ -77,6 +80,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
 		}
+
+		g_device->beginFrame();
+		g_device->present();
 	}
 
 	delete g_device;

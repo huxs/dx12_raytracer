@@ -71,9 +71,19 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <IncludePath>E:\SDK\DXR\0.09.01\include;$(IncludePath)</IncludePath>
+    <LibraryPath>E:\SDK\DXR\0.09.01\samples\FallbackLayer\Debug;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <IncludePath>E:\SDK\DXR\0.09.01\include;$(IncludePath)</IncludePath>
+    <LibraryPath>E:\SDK\DXR\0.09.01\samples\FallbackLayer\Release;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <IncludePath>E:\SDK\DXR\0.09.01\include;$(IncludePath)</IncludePath>
+    <LibraryPath>E:\SDK\DXR\0.09.01\samples\FallbackLayer\Debug;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <IncludePath>E:\SDK\DXR\0.09.01\include;$(IncludePath)</IncludePath>
+    <LibraryPath>E:\SDK\DXR\0.09.01\samples\FallbackLayer\Release;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -127,11 +137,13 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="d3d12_device.cpp" />
+    <ClCompile Include="d3d12_raytracer.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="stdafx.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="d3d12_device.h" />
+    <ClInclude Include="d3d12_raytracer.h" />
     <ClInclude Include="helper.h" />
     <ClInclude Include="stdafx.h" />
   </ItemGroup>
