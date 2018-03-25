@@ -43,6 +43,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="Raytracing.hlsl" />
+    <CustomBuild Include="Raytracing.hlsl" />
   </ItemGroup>
 </Project>

@@ -30,6 +30,8 @@ inline void ThrowIfFalse(bool value)
 	ThrowIfFailed(value ? S_OK : E_FAIL);
 }
 
+#define NAME_D3D12_OBJECT(x) x->SetName(L#x)
+
 struct File
 {
 	void* pData;

@@ -67,8 +67,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
 		hInstance,
 		nullptr);
 
-	g_device = new D3D12Device(hInstance, g_hWnd, 2, DXGI_FORMAT_R8G8B8A8_UNORM);
-	g_device->onWindowResize(width, height);
+	g_device = new D3D12Device(hInstance, g_hWnd, width, height, 2, DXGI_FORMAT_R8G8B8A8_UNORM);
 
 	D3D12Raytracer raytracer(g_device);
 

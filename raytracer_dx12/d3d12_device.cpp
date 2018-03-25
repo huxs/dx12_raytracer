@@ -3,8 +3,10 @@
 
 D3D12Device* D3D12Device::_Instance = nullptr;
 
-D3D12Device::D3D12Device(HINSTANCE hInstance, HWND hwnd, int bufferCount, DXGI_FORMAT bufferFormat)
+D3D12Device::D3D12Device(HINSTANCE hInstance, HWND hwnd, int width, int height, int bufferCount, DXGI_FORMAT bufferFormat)
 	: m_hwnd(hwnd)
+	, m_width(width)
+	, m_height(height)
 	, m_backbufferCount(bufferCount)
 	, m_backbufferFormat(bufferFormat)
 	, m_backbufferIndex(0)
@@ -79,6 +81,8 @@ D3D12Device::D3D12Device(HINSTANCE hInstance, HWND hwnd, int bufferCount, DXGI_F
 	m_fenceValues[0]++;
 
 	m_fenceEvent.Attach(CreateEvent(nullptr, FALSE, FALSE, nullptr));
+
+	createWindowDependentResources(m_backbufferCount, m_width, m_height, m_backbufferFormat);
 }
 
 D3D12Device::~D3D12Device()
@@ -89,6 +93,9 @@ D3D12Device::~D3D12Device()
 void D3D12Device::onWindowResize(int width, int height)
 {
 	createWindowDependentResources(m_backbufferCount, width, height, m_backbufferFormat);
+
+	m_width = width;
+	m_height = height;
 }
 
 void D3D12Device::createWindowDependentResources(int bufferCount, int width, int height, DXGI_FORMAT format)
@@ -202,9 +209,7 @@ void D3D12Device::present()
 	D3D12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_backbufferIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 	m_commandList->ResourceBarrier(1, &barrier);
 
-	ThrowIfFailed(m_commandList->Close());
-	ID3D12CommandList *commandLists[] = { m_commandList.Get() };
-	m_commandQueue->ExecuteCommandLists(ARRAYSIZE(commandLists), commandLists);
+	executeCommandList();
 
 	// The first argument instructs DXGI to block until VSync, putting the application
 	// to sleep until the next VSync. This ensures we don't waste any cycles rendering
@@ -246,5 +251,12 @@ void D3D12Device::waitForGpu()
 			}
 		}
 	}
+}
+
+void D3D12Device::executeCommandList()
+{
+	ThrowIfFailed(m_commandList->Close());
+	ID3D12CommandList *commandLists[] = { m_commandList.Get() };
+	m_commandQueue->ExecuteCommandLists(ARRAYSIZE(commandLists), commandLists);
 }
 

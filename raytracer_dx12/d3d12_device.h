@@ -3,22 +3,28 @@
 class D3D12Device
 {
 public:
-	D3D12Device(HINSTANCE hInstance, HWND hwnd, int bufferCount, DXGI_FORMAT bufferFormat);
+	D3D12Device(HINSTANCE hInstance, HWND hwnd, int width, int height, int bufferCount, DXGI_FORMAT bufferFormat);
 	~D3D12Device();
 	void onWindowResize(int width, int height);
 
 	void beginFrame();
 	void present();
 	void waitForGpu();
+	void executeCommandList();
 
 	ID3D12Device* getDevice() { return m_d3dDevice.Get(); }
 	ID3D12GraphicsCommandList* getCommandList() { return m_commandList.Get(); }
+	DXGI_FORMAT getBackbufferFormat() { return m_backbufferFormat; }
+	int getWidth() { return m_width; }
+	int getHeight() { return m_height; }
 	static D3D12Device* getInstance() { return _Instance; }
 private:
 	void createWindowDependentResources(int bufferCount, int width, int height, DXGI_FORMAT format);
 
 	HWND m_hwnd;
 	DXGI_FORMAT m_backbufferFormat;
+	int m_width;
+	int m_height;
 	int m_backbufferIndex;
 	int m_backbufferCount;
 
