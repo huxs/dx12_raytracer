@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "d3d12_device.h"
+#include "d3d12_raytracer.h"
 
 HWND g_hWnd;
 D3D12Device* g_device;
@@ -43,7 +44,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
 	windowClass.lpfnWndProc = WindowProc;
 	windowClass.hInstance = hInstance;
 	windowClass.hCursor = LoadCursor(NULL, IDC_ARROW);
-	windowClass.lpszClassName = "DXSampleClass";
+	windowClass.lpszClassName = L"DXSampleClass";
 	RegisterClassEx(&windowClass);
 
 	LONG width = 1280;
@@ -55,7 +56,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
 	// Create the window and store a handle to it.
 	g_hWnd = CreateWindow(
 		windowClass.lpszClassName,
-		"Raytracer DX12",
+		L"Raytracer DX12",
 		WS_OVERLAPPEDWINDOW,
 		CW_USEDEFAULT,
 		CW_USEDEFAULT,
@@ -68,6 +69,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
 
 	g_device = new D3D12Device(hInstance, g_hWnd, 2, DXGI_FORMAT_R8G8B8A8_UNORM);
 	g_device->onWindowResize(width, height);
+
+	D3D12Raytracer raytracer(g_device);
+
 	ShowWindow(g_hWnd, nCmdShow);
 
 	// Main sample loop.

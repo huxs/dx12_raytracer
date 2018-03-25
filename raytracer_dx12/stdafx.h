@@ -4,6 +4,8 @@
 
 #pragma once
 
+#define _CRT_SECURE_NO_WARNINGS
+
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers.
 #endif
@@ -24,5 +26,6 @@
 #include <d3dx12.h>
 #include <atlbase.h>
 #include <D3D12RaytracingFallback.h>
+#include <D3D12RaytracingPrototypeHelpers.hpp>
 
 #include "helper.h"
