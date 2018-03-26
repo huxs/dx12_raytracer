@@ -14,6 +14,8 @@ public:
 
 	ID3D12Device* getDevice() { return m_d3dDevice.Get(); }
 	ID3D12GraphicsCommandList* getCommandList() { return m_commandList.Get(); }
+	ID3D12CommandAllocator* getCommandAllocator() { return m_commandAllocators[m_backbufferIndex].Get();  }
+	ID3D12Resource* getRenderTarget() const { return m_renderTargets[m_backbufferIndex].Get(); }
 	DXGI_FORMAT getBackbufferFormat() { return m_backbufferFormat; }
 	int getWidth() { return m_width; }
 	int getHeight() { return m_height; }

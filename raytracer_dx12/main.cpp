@@ -35,6 +35,23 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 	return DefWindowProc(hWnd, message, wParam, lParam);
 }
 
+
+inline void EnableRaytracing()
+{
+	UUID experimentalFeaturesSMandDXR[] = { D3D12ExperimentalShaderModels, D3D12RaytracingPrototype };
+	UUID experimentalFeaturesSM[] = { D3D12ExperimentalShaderModels };
+
+	Microsoft::WRL::ComPtr<ID3D12Device> testDevice;
+	// D3D12CreateDevice needs to pass after enabling experimental features to successfully declare support.
+	if (FAILED(D3D12EnableExperimentalFeatures(ARRAYSIZE(experimentalFeaturesSMandDXR), experimentalFeaturesSMandDXR, nullptr, nullptr))
+		|| FAILED(D3D12CreateDevice(nullptr, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&testDevice))))
+	{
+		ThrowIfFalse(SUCCEEDED(D3D12EnableExperimentalFeatures(ARRAYSIZE(experimentalFeaturesSM), experimentalFeaturesSM, nullptr, nullptr))
+			&& SUCCEEDED(D3D12CreateDevice(nullptr, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&testDevice))));
+	}
+}
+
+
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
 {
 	// Initialize the window class.
@@ -67,6 +84,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
 		hInstance,
 		nullptr);
 
+	EnableRaytracing();
+
 	g_device = new D3D12Device(hInstance, g_hWnd, width, height, 2, DXGI_FORMAT_R8G8B8A8_UNORM);
 
 	D3D12Raytracer raytracer(g_device);
@@ -85,6 +104,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
 		}
 
 		g_device->beginFrame();
+
+		raytracer.doRaytracing();
+
+		raytracer.copyRaytracingOutputToBackbuffer();
+
 		g_device->present();
 	}
 

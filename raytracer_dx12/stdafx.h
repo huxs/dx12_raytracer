@@ -17,10 +17,11 @@
 #include <dxgidebug.h>
 #endif
 
+#pragma comment(lib, "FallbackLayer.lib")
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "dxguid.lib")
-#pragma comment(lib, "FallbackLayer.lib")
+
 
 #include <d3d12_1.h>
 #include <d3dx12.h>

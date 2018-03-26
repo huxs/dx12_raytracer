@@ -40,13 +40,13 @@ struct File
 
 inline File ReadEntireFile(const char *path) {
 	File result = {};
-	FILE* file = fopen(path, "rb");
+	FILE* file = fopen(path, "r+b");
 	if (file) {
 		fseek(file, 0, SEEK_END);
 		result.size = ftell(file);
 		fseek(file, 0, SEEK_SET);
-		result.pData = malloc(result.size);
-		fread(result.pData, 1, result.size, file);
+		result.pData = calloc(1, result.size);
+		size_t size = fread(result.pData, result.size, 1, file);
 		fclose(file);
 	}
 	return result;

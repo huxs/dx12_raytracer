@@ -18,8 +18,13 @@ public:
 	D3D12Raytracer(D3D12Device* device);
 	~D3D12Raytracer();
 
-	void loadGeometry();
-	void createPipelinestate();
+	void create_pipeline();
+	void create_acceleration_structure();
+	void create_shader_table();
+	
+
+	void doRaytracing();
+	void copyRaytracingOutputToBackbuffer();
 
 private:
 	WRAPPED_GPU_POINTER createWrappedPointer(ID3D12Resource* resource, UINT bufferNumElements);
@@ -45,4 +50,11 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_bottomLevelAccelerationStructure;
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_topLevelAccelerationStructure;
 	WRAPPED_GPU_POINTER m_topLevelAccelerationStructurePointer;
+
+	// Shader tables
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_rayGenShaderTable;
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_hitGroupShaderTable;
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_missShaderTable;
+	
+	
 };
