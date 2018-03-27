@@ -85,7 +85,7 @@ void D3D12Raytracer::create_pipeline()
 	hitGroup->SetHitGroupExport(MyHitGroup);
 
 	auto shaderConfig = dxrPipeline.CreateSubobject<CD3D12_RAYTRACING_SHADER_CONFIG_SUBOBJECT>();
-	shaderConfig->Config(4, 8);
+	shaderConfig->Config(4, 8); // Max Payload/Attribute size
 
 	auto shaderConfigAssociation = dxrPipeline.CreateSubobject<CD3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION_SUBOBJECT>();
 	shaderConfigAssociation->SetSubobjectToAssociate(*shaderConfig);
@@ -93,13 +93,11 @@ void D3D12Raytracer::create_pipeline()
 	shaderConfigAssociation->AddExport(c_missShaderName);
 	shaderConfigAssociation->AddExport(MyHitGroup);
 
-	//
-
 	auto globalRootSignature = dxrPipeline.CreateSubobject<CD3D12_ROOT_SIGNATURE_SUBOBJECT>();
 	globalRootSignature->SetRootSignature(m_globalRootSignature.Get());
 
 	auto pipelineConfig = dxrPipeline.CreateSubobject<CD3D12_RAYTRACING_PIPELINE_CONFIG_SUBOBJECT>();
-	pipelineConfig->Config(2);
+	pipelineConfig->Config(2); // Max Recursion Depth
 
 #if _DEBUG
 	PrintStateObjectDesc(dxrPipeline);
@@ -107,7 +105,6 @@ void D3D12Raytracer::create_pipeline()
 
 	ThrowIfFailed(m_raytracingDevice->CreateStateObject(dxrPipeline, IID_PPV_ARGS(&m_stateObject)));
 }
-
 
 void D3D12Raytracer::create_acceleration_structure()
 {
@@ -134,15 +131,15 @@ void D3D12Raytracer::create_acceleration_structure()
 
 	// AllocateUploadBuffer
 	{
-		uint16_t arrIndices[] = { 2, 1, 0 };
+		uint16_t arrIndices[] = { 0, 1, 2 };
 		D3D12_HEAP_PROPERTIES uploadHeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 		D3D12_RESOURCE_DESC bufferDesc = CD3DX12_RESOURCE_DESC::Buffer(sizeof(arrIndices));
 		ThrowIfFailed(m_device->getDevice()->CreateCommittedResource(&uploadHeapProperties, D3D12_HEAP_FLAG_NONE, &bufferDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&m_indexBuffer)));
-		NAME_D3D12_OBJECT(m_vertexBuffer);
+		NAME_D3D12_OBJECT(m_indexBuffer);
 		void* pData = nullptr;
-		m_vertexBuffer->Map(0, nullptr, &pData);
+		m_indexBuffer->Map(0, nullptr, &pData);
 		memcpy(pData, arrIndices, sizeof(arrIndices));
-		m_vertexBuffer->Unmap(0, nullptr);
+		m_indexBuffer->Unmap(0, nullptr);
 	}
 
 	D3D12_RAYTRACING_GEOMETRY_DESC geometryDesc = {};
@@ -156,59 +153,91 @@ void D3D12Raytracer::create_acceleration_structure()
 	geometryDesc.Triangles.VertexBuffer.StartAddress = m_vertexBuffer->GetGPUVirtualAddress();
 	geometryDesc.Triangles.VertexBuffer.StrideInBytes = sizeof(float) * 3;
 
-	// Get required sizes for an acceleration structure.
-	D3D12_GET_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO_DESC prebuildInfoDesc{};
-	prebuildInfoDesc.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
-	prebuildInfoDesc.NumDescs = 1;
 
 	D3D12_RESOURCE_STATES initialResourceState = m_raytracingDevice->GetAccelerationStructureResourceState();
 
 	D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO topLevelPrebuildInfo{};
-	prebuildInfoDesc.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
-	prebuildInfoDesc.pGeometryDescs = nullptr;
-	m_raytracingDevice->GetRaytracingAccelerationStructurePrebuildInfo(&prebuildInfoDesc, &topLevelPrebuildInfo);
-	ThrowIfFalse(topLevelPrebuildInfo.ResultDataMaxSizeInBytes > 0);
-
-	D3D12_HEAP_PROPERTIES uploadHeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+	{
+		D3D12_GET_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO_DESC prebuildInfoDesc{};
+		prebuildInfoDesc.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
+		prebuildInfoDesc.NumDescs = 2;
+		prebuildInfoDesc.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
+		prebuildInfoDesc.pGeometryDescs = nullptr;
+		m_raytracingDevice->GetRaytracingAccelerationStructurePrebuildInfo(&prebuildInfoDesc, &topLevelPrebuildInfo);
+		ThrowIfFalse(topLevelPrebuildInfo.ResultDataMaxSizeInBytes > 0);
+	}
 
 	{
+		D3D12_HEAP_PROPERTIES uploadHeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
 		D3D12_RESOURCE_DESC bufferDesc = CD3DX12_RESOURCE_DESC::Buffer(topLevelPrebuildInfo.ResultDataMaxSizeInBytes, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 		ThrowIfFailed(m_device->getDevice()->CreateCommittedResource(&uploadHeapProperties, D3D12_HEAP_FLAG_NONE, &bufferDesc, initialResourceState, nullptr, IID_PPV_ARGS(&m_topLevelAccelerationStructure)));
 	}
 
 	D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO bottomLevelPrebuildInfo{};
-	prebuildInfoDesc.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
-	prebuildInfoDesc.pGeometryDescs = &geometryDesc;
-	m_raytracingDevice->GetRaytracingAccelerationStructurePrebuildInfo(&prebuildInfoDesc, &bottomLevelPrebuildInfo);
-	ThrowIfFalse(bottomLevelPrebuildInfo.ResultDataMaxSizeInBytes > 0);
+	{
+		D3D12_GET_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO_DESC prebuildInfoDesc{};
+		prebuildInfoDesc.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
+		prebuildInfoDesc.NumDescs = 1;
+		prebuildInfoDesc.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
+		prebuildInfoDesc.pGeometryDescs = &geometryDesc;
+		m_raytracingDevice->GetRaytracingAccelerationStructurePrebuildInfo(&prebuildInfoDesc, &bottomLevelPrebuildInfo);
+		ThrowIfFalse(bottomLevelPrebuildInfo.ResultDataMaxSizeInBytes > 0);
+	}
 
 	{
+		D3D12_HEAP_PROPERTIES uploadHeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
 		D3D12_RESOURCE_DESC bufferDesc = CD3DX12_RESOURCE_DESC::Buffer(bottomLevelPrebuildInfo.ResultDataMaxSizeInBytes, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 		ThrowIfFailed(m_device->getDevice()->CreateCommittedResource(&uploadHeapProperties, D3D12_HEAP_FLAG_NONE, &bufferDesc, initialResourceState, nullptr, IID_PPV_ARGS(&m_bottomLevelAccelerationStructure)));
 	}
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> scratchResource;
 	{
+		D3D12_HEAP_PROPERTIES uploadHeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
 		D3D12_RESOURCE_DESC bufferDesc = CD3DX12_RESOURCE_DESC::Buffer(max(topLevelPrebuildInfo.ScratchDataSizeInBytes, bottomLevelPrebuildInfo.ScratchDataSizeInBytes), D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 		ThrowIfFailed(m_device->getDevice()->CreateCommittedResource(&uploadHeapProperties, D3D12_HEAP_FLAG_NONE, &bufferDesc, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nullptr, IID_PPV_ARGS(&scratchResource)));
 	}
 
-	D3D12_RAYTRACING_FALLBACK_INSTANCE_DESC instanceDesc = {};
-	instanceDesc.Transform[0] = instanceDesc.Transform[5] = instanceDesc.Transform[10] = 1;
-	instanceDesc.InstanceMask = 1;
-	instanceDesc.AccelerationStructure = createWrappedPointer(m_bottomLevelAccelerationStructure.Get(), (UINT)(bottomLevelPrebuildInfo.ResultDataMaxSizeInBytes) / sizeof(UINT));
+	D3D12_RAYTRACING_FALLBACK_INSTANCE_DESC instanceDesc[2];
+	{
+		instanceDesc[0] = {};
 
+		FLOAT mat[12] = {
+			1, 0, 0, -0.5f,
+			0, 1, 0, 0,
+			0, 0, 1, 0,
+		};
+
+		memcpy(instanceDesc[0].Transform, mat, sizeof(mat));
+		instanceDesc[0].InstanceMask = 1;
+		instanceDesc[0].AccelerationStructure = createWrappedPointer(m_bottomLevelAccelerationStructure.Get(), (UINT)(bottomLevelPrebuildInfo.ResultDataMaxSizeInBytes) / sizeof(UINT));
+	}
+#if 1
+	{
+		instanceDesc[1] = {};
+
+		FLOAT mat[12] = {
+			1, 0, 0, 0.5f,
+			0, 1, 0, 0,
+			0, 0, 1, 0,
+		};
+
+		memcpy(instanceDesc[1].Transform, mat, sizeof(mat));
+		instanceDesc[1].InstanceMask = 1;
+		instanceDesc[1].AccelerationStructure = createWrappedPointer(m_bottomLevelAccelerationStructure.Get(), (UINT)(bottomLevelPrebuildInfo.ResultDataMaxSizeInBytes) / sizeof(UINT));
+	}
+#endif
 	Microsoft::WRL::ComPtr<ID3D12Resource> instanceDescs;
 
 	// AllocateUploadBuffer
 	{
+		D3D12_HEAP_PROPERTIES uploadHeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 		D3D12_RESOURCE_DESC bufferDesc = CD3DX12_RESOURCE_DESC::Buffer(sizeof(instanceDesc));
 		ThrowIfFailed(m_device->getDevice()->CreateCommittedResource(&uploadHeapProperties, D3D12_HEAP_FLAG_NONE, &bufferDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&instanceDescs)));
-		NAME_D3D12_OBJECT(m_vertexBuffer);
+		NAME_D3D12_OBJECT(instanceDescs);
 		void* pData = nullptr;
-		m_vertexBuffer->Map(0, nullptr, &pData);
+		instanceDescs->Map(0, nullptr, &pData);
 		memcpy(pData, &instanceDesc, sizeof(instanceDesc));
-		m_vertexBuffer->Unmap(0, nullptr);
+		instanceDescs->Unmap(0, nullptr);
 	}
 
 	m_topLevelAccelerationStructurePointer = createWrappedPointer(m_topLevelAccelerationStructure.Get(), (UINT)(topLevelPrebuildInfo.ResultDataMaxSizeInBytes) / sizeof(UINT));
@@ -226,14 +255,15 @@ void D3D12Raytracer::create_acceleration_structure()
 	}
 
 	// Top Level Acceleration Structure desc
-	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC topLevelBuildDesc = bottomLevelBuildDesc;
+	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC topLevelBuildDesc{};
 	{
+		topLevelBuildDesc.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
+		topLevelBuildDesc.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
+		topLevelBuildDesc.ScratchAccelerationStructureData = { scratchResource->GetGPUVirtualAddress(), scratchResource->GetDesc().Width };
 		topLevelBuildDesc.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
 		topLevelBuildDesc.DestAccelerationStructureData = { m_topLevelAccelerationStructure->GetGPUVirtualAddress(), topLevelPrebuildInfo.ResultDataMaxSizeInBytes };
-		topLevelBuildDesc.NumDescs = 1;
-		topLevelBuildDesc.pGeometryDescs = nullptr;
+		topLevelBuildDesc.NumDescs = 2;
 		topLevelBuildDesc.InstanceDescs = instanceDescs->GetGPUVirtualAddress();
-		topLevelBuildDesc.ScratchAccelerationStructureData = { scratchResource->GetGPUVirtualAddress(), scratchResource->GetDesc().Width };
 	}
 
 	// Set the descriptor heaps to be used during acceleration structure build for the Fallback Layer.
@@ -249,7 +279,6 @@ void D3D12Raytracer::create_acceleration_structure()
 	// Wait for GPU to finish as the locally created temporary GPU resources will get released once we go out of scope
 	m_device->waitForGpu();
 }
-
 
 inline UINT Align(UINT size, UINT alignment)
 {
@@ -282,9 +311,9 @@ void D3D12Raytracer::create_shader_table()
 		D3D12_RESOURCE_DESC bufferDesc = CD3DX12_RESOURCE_DESC::Buffer(size);
 		ThrowIfFailed(m_device->getDevice()->CreateCommittedResource(&uploadHeapProperties, D3D12_HEAP_FLAG_NONE, &bufferDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&m_hitGroupShaderTable)));
 		uint8_t *pMappedData;
-		m_rayGenShaderTable->Map(0, nullptr, reinterpret_cast<void**>(&pMappedData));
+		m_hitGroupShaderTable->Map(0, nullptr, reinterpret_cast<void**>(&pMappedData));
 		memcpy(pMappedData, rayHitGroupIdentifier, shaderIdentifierSize);
-		m_rayGenShaderTable->Unmap(0, nullptr);
+		m_hitGroupShaderTable->Unmap(0, nullptr);
 	}
 
 	// Ray miss table
@@ -294,9 +323,9 @@ void D3D12Raytracer::create_shader_table()
 		D3D12_RESOURCE_DESC bufferDesc = CD3DX12_RESOURCE_DESC::Buffer(size);
 		ThrowIfFailed(m_device->getDevice()->CreateCommittedResource(&uploadHeapProperties, D3D12_HEAP_FLAG_NONE, &bufferDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&m_missShaderTable)));
 		uint8_t *pMappedData;
-		m_rayGenShaderTable->Map(0, nullptr, reinterpret_cast<void**>(&pMappedData));
+		m_missShaderTable->Map(0, nullptr, reinterpret_cast<void**>(&pMappedData));
 		memcpy(pMappedData, rayMissShaderIdentifier, shaderIdentifierSize);
-		m_rayGenShaderTable->Unmap(0, nullptr);
+		m_missShaderTable->Unmap(0, nullptr);
 	}
 }
 

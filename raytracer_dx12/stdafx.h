@@ -11,6 +11,9 @@
 #endif
 
 #include <Windows.h>
+
+#include <assert.h>
+
 #include <wrl.h>
 #include <dxgi1_4.h>
 #ifdef _DEBUG
